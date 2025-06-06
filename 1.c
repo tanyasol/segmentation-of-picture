@@ -5,9 +5,6 @@
 #include "lodepng.h"
 #include "lodepng.c"
 
-#define GAUSSIAN_KERNEL_SIZE 5
-#define CANNY_THRESHOLD_LOW 50
-#define CANNY_THRESHOLD_HIGH 150
 
 unsigned char* load_png(const char* filename, unsigned int* width, unsigned int* height) 
 {
@@ -36,6 +33,7 @@ typedef struct DUS{
     int width;int height;
     int* parent; int* level;
 }DUS;
+
 int findset(DUS *elem, int key){
     if (elem->parent[key]!=key){
         elem->parent[key]=findset(elem,elem->parent[key]);
@@ -58,20 +56,12 @@ DUS* makeset(int width, int height){
     return elem;
 }
 
-
-
 void unionsets(DUS *elem, int key1, int key2){
     int mem_key1=findset(elem, key1);
     int mem_key2=findset(elem, key2); if (mem_key1== mem_key2)return;
     if (elem->level[mem_key1] < elem->level[mem_key2]) elem->parent[mem_key1]=mem_key2;
     else if(elem->level[mem_key1] > elem->level[mem_key2]) elem->parent[mem_key2]=mem_key1;
     else {elem->parent[mem_key2]=mem_key1;elem->level[mem_key1]++;}
-}
-
-void free_disjoint_set(DUS* elem){
-    free(elem->parent);
-    free(elem->level);
-    free(elem);
 }
 
 
@@ -97,6 +87,7 @@ void contrast(unsigned char *col, int bw_size)
     } 
     return; 
 } 
+
 void bw_to_rgba(const unsigned char* bw, unsigned char* pict, int bw_size){
     int i=0;
     for (i=0;i<bw_size;i++){pict[i*4]=bw[i];pict[i*4+1]=bw[i];pict[i*4+2]=bw[i];pict[i*4+3]=255;}
@@ -261,32 +252,19 @@ int main() {
     bw_size = width * height;
     
     unsigned char* bw_image = (unsigned char*)malloc(width * height);
-   
-    unsigned char* filtered_image = (unsigned char*)malloc(width * height);
-    unsigned char* edges = (unsigned char*)malloc(width * height);
-    unsigned char* output_rgb = (unsigned char*)malloc(width * height * 4);
+    unsigned char* res = (unsigned char*)malloc(width * height * 4);
     unsigned char* finish = (unsigned char*)malloc(size*sizeof(unsigned char)); 
     rgb_to_bw(picture, bw_image, width, height);
     contrast(bw_image, bw_size); 
-    Gauss(bw_image, filtered_image, width, height);
-   
-    make_comp(filtered_image, width, height, 25, 5);
-
-    
-    // for (int i = 0; i < width*height; i++) {
-    //     if (filtered_image[i] > 0) filtered_image[i] = 255;
-    // }
-
-    color(filtered_image, output_rgb, width, height);
-    write_png("rgb.png", output_rgb, width, height);
-   
-    
-    
+    Gauss(bw_image, finish, width, height);
+    make_comp(finish, width, height, 25, 5);
+    color(finish, res, width, height);
+    write_png("rgb.png", res, width, height);
     free(bw_image);
 
-    free(filtered_image);
-    free(edges);
-    free(output_rgb);
+    free(finish);
+    
+    free(res);
     
     return 0;
 }
