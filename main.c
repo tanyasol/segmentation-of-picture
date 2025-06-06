@@ -88,7 +88,7 @@ void contrast(unsigned char *col, int bw_size)
     return; 
 } 
 
-void bw_to_rgba(const unsigned char* bw, unsigned char* pict, int bw_size){
+void bw_to_rgb(const unsigned char* bw, unsigned char* pict, int bw_size){
     int i=0;
     for (i=0;i<bw_size;i++){pict[i*4]=bw[i];pict[i*4+1]=bw[i];pict[i*4+2]=bw[i];pict[i*4+3]=255;}
 }
@@ -107,7 +107,32 @@ void Gauss(unsigned char *col, unsigned char *blr_pic, int width, int height)
         } 
    return; 
 } 
-
+void sharp(unsigned char* pict, unsigned char* out, int width, int height){
+    const float kernel[3][3] = {
+        { -1.0, -1.0, -1.0 },
+        { -1.0,  9.0, -1.0 },
+        { -1.0, -1.0, -1.0}
+    };
+    int i, j, j1, i1, pix, count_int;float count;
+    for (i=1; i<height-1; i++){
+        for (j=1; j< width-1; j++){
+            count=0.0;
+            for (i1= -1; i1 <= 1; i1++){
+                for (j1=-1;j1 <= 1;j1++) {
+                    pix= pict[(i+i1)*width+(j+j1)];
+                    count+=pix *kernel[j1+1][i1+1];
+                }
+            }
+            count_int=(int)count;
+            count_int=count_int<0 ? 0 : count_int;  count_int=count_int > 255 ? 255 : count_int;
+            out[i*width+j]=(unsigned char)count_int;
+        }
+    }
+    for(i= 0;i< width; i++){out[i]=pict[i]; out[(height-1)*width + i]=pict[(height-1)*width+i];
+    }
+    for(j=0; j < height; j++){out[j*width]=pict[j*width]; out[j*width+width-1]=pict[j*width+width-1];
+    }
+}
 
 void join(unsigned char* pict, DUS* elem, int width, int height, int dif){
     const int d[8][2]={{-1,-1}, {-1,0}, {-1,1},{0,-1},{0,1},{1,-1}, {1,0}, {1,1}};
@@ -250,18 +275,23 @@ int main() {
     } 
     size = width * height * 4;
     bw_size = width * height;
-    
+    unsigned char* sh_pic = (unsigned char*)malloc(width * height);
     unsigned char* bw_image = (unsigned char*)malloc(width * height);
     unsigned char* res = (unsigned char*)malloc(width * height * 4);
     unsigned char* finish = (unsigned char*)malloc(size*sizeof(unsigned char)); 
+    unsigned char* res2 = (unsigned char*)malloc(bw_size*sizeof(unsigned char)); 
     rgb_to_bw(picture, bw_image, width, height);
     contrast(bw_image, bw_size); 
     Gauss(bw_image, finish, width, height);
+    //sharp(res2, sh_pic, width, height);
+    //bw_to_rgb(sh_pic, finish, bw_size);
+    //write_png("sh_pic.png", res, width, height);
     make_comp(finish, width, height, 25, 5);
     color(finish, res, width, height);
+    //bw_to_rgb(res, res2, bw_size);
     write_png("rgb.png", res, width, height);
     free(bw_image);
-
+    free(sh_pic);   
     free(finish);
     
     free(res);
